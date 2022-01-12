@@ -31,9 +31,9 @@ contract DividendToken {
         uint256 debt = (_balances[investor_].balance * dividendValue) /
             _totalSupply;
         if (debt > 0) {
+            _balances[investor_].lastDividentsValue = totalDividendPoints;
             (bool sent, ) = investor_.call{value: debt}("");
             require(sent, "Failed to send Ether");
-            _balances[investor_].lastDividentsValue = totalDividendPoints;
         }
     }
 
