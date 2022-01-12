@@ -26,23 +26,19 @@ contract DividendToken {
         totalDividendPoints += msg.value;
     }
 
-    modifier updateDivident(address investor_) {
-        uint256 debt = dividendDebt(investor_);
+    function _payDividend(address investor_) internal {
+        uint256 dividendValue = totalDividendPoints - lastDividendOf(investor_);
+        uint256 debt = (_balances[investor_].balance * dividendValue) /
+            _totalSupply;
         if (debt > 0) {
-            (bool sent, bytes memory data) = investor_.call{value: debt}("");
+            (bool sent, ) = investor_.call{value: debt}("");
             require(sent, "Failed to send Ether");
             _balances[investor_].lastDividentsValue = totalDividendPoints;
         }
-        _;
     }
 
     function getTotalDividents() external view returns (uint256) {
         return totalDividendPoints;
-    }
-
-    function dividendDebt(address investor_) internal view returns (uint256) {
-        uint256 dividendValue = totalDividendPoints - lastDividendOf(investor_);
-        return (_balances[investor_].balance * dividendValue) / _totalSupply;
     }
 
     function name() public view returns (string memory) {
@@ -69,12 +65,7 @@ contract DividendToken {
         return _balances[account].lastDividentsValue;
     }
 
-    function transfer(address recipient, uint256 amount)
-        public
-        updateDivident(recipient)
-        updateDivident(msg.sender)
-        returns (bool)
-    {
+    function transfer(address recipient, uint256 amount) public returns (bool) {
         _transfer(msg.sender, recipient, amount);
         return true;
     }
@@ -96,7 +87,7 @@ contract DividendToken {
         address sender,
         address recipient,
         uint256 amount
-    ) public updateDivident(sender) updateDivident(recipient) returns (bool) {
+    ) public returns (bool) {
         _transfer(sender, recipient, amount);
 
         uint256 currentAllowance = _allowances[sender][msg.sender];
@@ -162,8 +153,6 @@ contract DividendToken {
     function _mint(address account, uint256 amount) internal {
         require(account != address(0), "ERC20: mint to the zero address");
 
-        _beforeTokenTransfer(address(0), account, amount);
-
         _totalSupply += amount;
         _balances[account].balance += amount;
         emit Transfer(address(0), account, amount);
@@ -189,7 +178,10 @@ contract DividendToken {
         address from,
         address to,
         uint256 amount
-    ) internal {}
+    ) internal {
+        _payDividend(from);
+        _payDividend(to);
+    }
 
     function _afterTokenTransfer(
         address from,
