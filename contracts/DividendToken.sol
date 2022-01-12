@@ -1,22 +1,14 @@
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-
-
 contract DividendToken {
-    
     event Transfer(address from, address to, uint256 value);
     event Approval(address owner, address spender, uint256 value);
 
-    using SafeMath for uint256;
-    
     mapping(address => mapping(address => uint256)) private _allowances;
     uint256 private _totalSupply;
     string private _name;
     string private _symbol;
     uint256 totalDividendPoints = 0;
-
 
     struct accountInfo {
         uint256 balance;
@@ -30,7 +22,7 @@ contract DividendToken {
         _mint(msg.sender, 10000);
     }
 
-    fallback () external payable {
+    fallback() external payable {
         totalDividendPoints += msg.value;
     }
 
@@ -43,26 +35,25 @@ contract DividendToken {
         }
         _;
     }
-    
-    function getTotalDividents() view external returns (uint256) {
+
+    function getTotalDividents() external view returns (uint256) {
         return totalDividendPoints;
     }
 
-
     function dividendDebt(address investor_) internal view returns (uint256) {
-        uint256 dividendValue = totalDividendPoints.sub(lastDividendOf(investor_));
-        return (_balances[investor_].balance.mul(dividendValue)).div(_totalSupply);
+        uint256 dividendValue = totalDividendPoints - lastDividendOf(investor_);
+        return (_balances[investor_].balance * dividendValue) / _totalSupply;
     }
 
     function name() public view returns (string memory) {
         return _name;
-    } 
+    }
 
     function symbol() public view returns (string memory) {
         return _symbol;
     }
 
-     function decimals() public pure returns (uint8) {
+    function decimals() public pure returns (uint8) {
         return 0;
     }
 
@@ -78,15 +69,21 @@ contract DividendToken {
         return _balances[account].lastDividentsValue;
     }
 
-    function transfer(address recipient, uint256 amount) public   
-    updateDivident(recipient) 
-    updateDivident(msg.sender)
- returns (bool) {
+    function transfer(address recipient, uint256 amount)
+        public
+        updateDivident(recipient)
+        updateDivident(msg.sender)
+        returns (bool)
+    {
         _transfer(msg.sender, recipient, amount);
         return true;
     }
 
-    function allowance(address owner, address spender) public view returns (uint256) {
+    function allowance(address owner, address spender)
+        public
+        view
+        returns (uint256)
+    {
         return _allowances[owner][spender];
     }
 
@@ -99,51 +96,62 @@ contract DividendToken {
         address sender,
         address recipient,
         uint256 amount
-    ) public   
-    updateDivident(sender)
-    updateDivident(recipient)
- returns (bool) {
+    ) public updateDivident(sender) updateDivident(recipient) returns (bool) {
         _transfer(sender, recipient, amount);
 
         uint256 currentAllowance = _allowances[sender][msg.sender];
-        require(currentAllowance >= amount, "ERC20: transfer amount exceeds allowance");
-        unchecked {
-            _approve(sender, msg.sender, currentAllowance - amount);
-        }
+        require(
+            currentAllowance >= amount,
+            "ERC20: transfer amount exceeds allowance"
+        );
+        _approve(sender, msg.sender, currentAllowance - amount);
 
         return true;
     }
 
-     function increaseAllowance(address spender, uint256 addedValue) public returns (bool) {
-        _approve(msg.sender, spender, _allowances[msg.sender][spender] + addedValue);
+    function increaseAllowance(address spender, uint256 addedValue)
+        public
+        returns (bool)
+    {
+        _approve(
+            msg.sender,
+            spender,
+            _allowances[msg.sender][spender] + addedValue
+        );
         return true;
     }
 
-    function decreaseAllowance(address spender, uint256 subtractedValue) public returns (bool) {
+    function decreaseAllowance(address spender, uint256 subtractedValue)
+        public
+        returns (bool)
+    {
         uint256 currentAllowance = _allowances[msg.sender][spender];
-        require(currentAllowance >= subtractedValue, "ERC20: decreased allowance below zero");
-        unchecked {
-            _approve(msg.sender, spender, currentAllowance - subtractedValue);
-        }
+        require(
+            currentAllowance >= subtractedValue,
+            "ERC20: decreased allowance below zero"
+        );
+        _approve(msg.sender, spender, currentAllowance - subtractedValue);
 
         return true;
     }
 
-     function _transfer(
+    function _transfer(
         address sender,
         address recipient,
         uint256 amount
-    ) internal   {
+    ) internal {
         require(sender != address(0), "ERC20: transfer from the zero address");
         require(recipient != address(0), "ERC20: transfer to the zero address");
 
         _beforeTokenTransfer(sender, recipient, amount);
 
         uint256 senderBalance = _balances[sender].balance;
-        require(senderBalance >= amount, "ERC20: transfer amount exceeds balance");
-        unchecked {
-            _balances[sender].balance = senderBalance - amount;
-        }
+        require(
+            senderBalance >= amount,
+            "ERC20: transfer amount exceeds balance"
+        );
+
+        _balances[sender].balance = senderBalance - amount;
         _balances[recipient].balance += amount;
 
         emit Transfer(sender, recipient, amount);
@@ -151,7 +159,7 @@ contract DividendToken {
         _afterTokenTransfer(sender, recipient, amount);
     }
 
-    function _mint(address account, uint256 amount) internal   {
+    function _mint(address account, uint256 amount) internal {
         require(account != address(0), "ERC20: mint to the zero address");
 
         _beforeTokenTransfer(address(0), account, amount);
@@ -163,28 +171,13 @@ contract DividendToken {
         _afterTokenTransfer(address(0), account, amount);
     }
 
-    function _burn(address account, uint256 amount) internal   {
-        require(account != address(0), "ERC20: burn from the zero address");
-
-        _beforeTokenTransfer(account, address(0), amount);
-
-        uint256 accountBalance = _balances[account].balance;
-        require(accountBalance >= amount, "ERC20: burn amount exceeds balance");
-        unchecked {
-            _balances[account].balance = accountBalance - amount;
-        }
-        _totalSupply -= amount;
-
-        emit Transfer(account, address(0), amount);
-
-        _afterTokenTransfer(account, address(0), amount);
-    }
+    function _burn(address account, uint256 amount) internal {}
 
     function _approve(
         address owner,
         address spender,
         uint256 amount
-    ) internal   {
+    ) internal {
         require(owner != address(0), "ERC20: approve from the zero address");
         require(spender != address(0), "ERC20: approve to the zero address");
 
@@ -196,11 +189,11 @@ contract DividendToken {
         address from,
         address to,
         uint256 amount
-    ) internal   {}
+    ) internal {}
 
     function _afterTokenTransfer(
         address from,
         address to,
         uint256 amount
-    ) internal   {}
+    ) internal {}
 }
