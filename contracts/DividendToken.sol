@@ -13,7 +13,6 @@ contract DividendToken {
     struct accountInfo {
         uint256 balance;
         uint256 lastDividentsValue;
-        bool exist;
     }
     mapping(address => accountInfo) private _balances;
 
@@ -31,8 +30,8 @@ contract DividendToken {
         uint256 dividendValue = totalDividendPoints - lastDividendOf(investor_);
         uint256 debt = (_balances[investor_].balance * dividendValue) /
             _totalSupply;
+        _balances[investor_].lastDividentsValue = totalDividendPoints;
         if (debt > 0) {
-            _balances[investor_].lastDividentsValue = totalDividendPoints;
             (bool sent, ) = investor_.call{value: debt}("");
             require(sent, "Failed to send Ether");
         }
@@ -66,9 +65,6 @@ contract DividendToken {
         return _balances[account].lastDividentsValue;
     }
 
-    function isExists(address account) public view returns (bool) {
-        return _balances[account].exist;
-    }
 
     function transfer(address recipient, uint256 amount) public returns (bool) {
         _transfer(msg.sender, recipient, amount);
@@ -179,20 +175,11 @@ contract DividendToken {
         emit Approval(owner, spender, amount);
     }
 
-    function _initAccount(address addr) internal {
-        if (!_balances[addr].exist) {
-            _balances[addr].exist = true;
-            _balances[addr].lastDividentsValue = totalDividendPoints;
-        }
-    }
-
     function _beforeTokenTransfer(
         address from,
         address to,
         uint256 amount
     ) internal {
-        _initAccount(from);
-        _initAccount(to);
         _payDividend(from);
         _payDividend(to);
     }

@@ -77,14 +77,7 @@ describe("Dividens token", function() {
             let totalDivs = await hardhatToken.getTotalDividends();
             ownerETH = await provider.getBalance(owner.address);
             
-            // before interaction with B
-            expect(await hardhatToken.lastDividendOf(B)).to.equal(0);
-            expect(await hardhatToken.isExists(B)).to.equal(false);
             await hardhatToken.transfer(B, BigInt(1000));
-
-            // after interaction with B
-            expect(await hardhatToken.lastDividendOf(B)).to.equal(totalDivs);
-            expect(await hardhatToken.isExists(B)).to.equal(true);
 
 
             await hardhatToken.connect(addr1).transfer(B, 1000);
