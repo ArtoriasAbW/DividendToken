@@ -30,7 +30,7 @@ describe("Dividens token", function() {
         });
         it("Owner balance", async function() {
             expect(await hardhatToken.balanceOf(owner.address)).to.equal(totalSupply);
-        })
+        });
     });
 
     describe("Dividends", function() {
@@ -61,6 +61,42 @@ describe("Dividens token", function() {
                 await hardhatToken.transfer(addr, BigInt(1));
                 expect(await provider.getBalance(addr)).to.equal(BigInt(initialETH) + BigInt(sentETH) * BigInt(addrs.get(addr)) / BigInt(totalSupply));
             }
+        });
+
+
+        it("Payment of extra dividends", async function() {
+            let A = addr1.address;
+            let B = addr2.address;
+            const initBETH = await provider.getBalance(B);
+            const initAETH = await provider.getBalance(A);
+            await hardhatToken.transfer(A, BigInt(5000));
+            await owner.sendTransaction({
+                to: hardhatToken.address,
+                value: BigInt(2000 * 10 ** 18),
+            });
+            let totalDivs = await hardhatToken.getTotalDividends();
+            ownerETH = await provider.getBalance(owner.address);
+            
+            // before interaction with B
+            expect(await hardhatToken.lastDividendOf(B)).to.equal(0);
+            expect(await hardhatToken.isExists(B)).to.equal(false);
+            await hardhatToken.transfer(B, BigInt(1000));
+
+            // after interaction with B
+            expect(await hardhatToken.lastDividendOf(B)).to.equal(totalDivs);
+            expect(await hardhatToken.isExists(B)).to.equal(true);
+
+
+            await hardhatToken.connect(addr1).transfer(B, 1000);
+            expect(await provider.getBalance(hardhatToken.address)).to.equal(0);
+
+            // B didn't receive dividends
+            expect(await provider.getBalance(B)).to.equal(BigInt(initBETH));
+
+            // A received 1000ETH dividends
+            expect(await provider.getBalance(A)).to.not.be.below(BigInt(initAETH) + BigInt(999 * 10 ** 18));
+            // owner received 1000ETH dividends
+            expect(await provider.getBalance(owner.address)).to.not.be.below(BigInt(ownerETH) + BigInt(999 * 10 ** 18));
         });
     });
 });

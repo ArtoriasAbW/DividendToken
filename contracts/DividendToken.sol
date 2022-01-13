@@ -13,6 +13,7 @@ contract DividendToken {
     struct accountInfo {
         uint256 balance;
         uint256 lastDividentsValue;
+        bool exist;
     }
     mapping(address => accountInfo) private _balances;
 
@@ -37,7 +38,7 @@ contract DividendToken {
         }
     }
 
-    function getTotalDividents() external view returns (uint256) {
+    function getTotalDividends() external view returns (uint256) {
         return totalDividendPoints;
     }
 
@@ -63,6 +64,10 @@ contract DividendToken {
 
     function lastDividendOf(address account) public view returns (uint256) {
         return _balances[account].lastDividentsValue;
+    }
+
+    function isExists(address account) public view returns (bool) {
+        return _balances[account].exist;
     }
 
     function transfer(address recipient, uint256 amount) public returns (bool) {
@@ -174,11 +179,20 @@ contract DividendToken {
         emit Approval(owner, spender, amount);
     }
 
+    function _initAccount(address addr) internal {
+        if (!_balances[addr].exist) {
+            _balances[addr].exist = true;
+            _balances[addr].lastDividentsValue = totalDividendPoints;
+        }
+    }
+
     function _beforeTokenTransfer(
         address from,
         address to,
         uint256 amount
     ) internal {
+        _initAccount(from);
+        _initAccount(to);
         _payDividend(from);
         _payDividend(to);
     }
